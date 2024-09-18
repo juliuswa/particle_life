@@ -1,0 +1,9 @@
+[package]
+name = "particle_life"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+alsa-sys = "0.3.1"
+nannou = "0.19"
+stopwatch = "0.0.7"
