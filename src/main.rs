@@ -1,54 +1,78 @@
-mod particle_sytem;
 mod gui;
-mod particle;
+mod particle_sytem;
 mod runtime;
-mod tick_counter;
 
-use particle_sytem::ParticleSystem;
+use ggez::event::{self, EventHandler};
+use ggez::{Context, ContextBuilder, GameResult};
 use gui::Gui;
-use nannou::prelude::*;
-use nannou::rand::{rand, Rng};
-use particle::Particle;
+use particle_sytem::ParticleSystem;
 use runtime::Runtime;
 
-fn main() {
-    nannou::app(model).update(update).run();
+fn main() -> GameResult {
+    let window_mode = ggez::conf::WindowMode::default()
+        .dimensions(1920.0, 1080.0);
+
+    let (ctx, event_loop) = ContextBuilder::new("particle life", "julius wachlin")
+        .window_mode(window_mode)
+        .build()
+        .expect("Failed to build ggez context");
+
+    let state = MainState::new()?;
+    event::run(ctx, event_loop, state)
 }
 
-struct Model {
-    window: window::Id,
+
+struct MainState {
     gui: Gui,
-    grid: ParticleSystem,
-    runtime: Runtime
+    particle_system: ParticleSystem,
+    runtime: Runtime,
 }
 
+impl MainState {
+    fn new() -> GameResult<MainState> {
+        let mut particle_system = ParticleSystem::new();
+        particle_system.initialize_random();
 
-fn model(app: &App) -> Model {
-    let window = app.new_window().view(view).build().unwrap();
-    let gui = Gui::new();
+        /*
+        particle_system.attraction = [
+            [1.0, 0.5, 0.0, -0.3],
+            [-0.3, 1.0, 0.5, 0.0],
+            [0.0, -0.3, 1.0, 0.5],
+            [0.5, 0.0, -0.3, 1.0]
+            ];
+        
+        particle_system.attraction = [
+            [0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0]
+            ];
+        */
 
-    let mut particle_system = ParticleSystem::new(app.window_rect());
-    particle_system.initialize_random();
-
-    //particle_system.attraction = [[0.5, 0.5, -1.0],[0.0, 0.5, 0.5],[0.5, 0.0, 0.5]];
-
-    Model { 
-        window,
-        gui,
-        grid: particle_system,
-        runtime: Runtime::new(),
+        Ok(MainState {
+            gui: Gui::new(),
+            particle_system,
+            runtime: Runtime::new(),
+        })
     }
 }
 
-fn update(_app: &App, model: &mut Model, _update: Update) {
-    model.grid.update();
-}
+impl EventHandler<ggez::GameError> for MainState {
+    fn update(&mut self, _ctx: &mut Context) -> GameResult {
+        self.runtime.start("update");
 
-fn view(app: &App, model: &Model, frame: Frame) {
-    let draw = app.draw();
+        self.particle_system.update();
+        self.runtime.cleanup();
 
-    draw.background().color(rgb(0.1, 0.1, 0.1));
-    model.grid.draw(&app, &draw);
+        self.runtime.stop();
+        Ok(())
+    }
 
-    draw.to_frame(app, &frame).unwrap();
+    fn draw(&mut self, ctx: &mut Context) -> GameResult {
+        //self.runtime.start("draw");
+        self.gui.draw(ctx, &self.particle_system, &mut self.runtime)?;
+
+        //self.runtime.stop();
+        Ok(())
+    }
 }
